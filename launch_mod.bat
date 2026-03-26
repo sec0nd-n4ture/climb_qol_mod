@@ -1,1 +1,1 @@
-python main.py
+python mod_launcher.py
