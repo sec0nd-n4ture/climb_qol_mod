@@ -6,6 +6,6 @@ LAUNCH_WITH_SOLDAT = False
 SOLDAT_EXECUTABLE_DIR = r"C:\Soldat\soldat.exe"
 
 if LAUNCH_WITH_SOLDAT:
-    Popen(r"C:\Soldat\soldat.exe")
+    Popen(SOLDAT_EXECUTABLE_DIR)
     time.sleep(3)
 os.system("python main.py")
