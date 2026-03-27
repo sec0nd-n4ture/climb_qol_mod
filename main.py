@@ -223,6 +223,8 @@ class ModMain:
         self.api.restore_cursor_controls()
         self.api.restore_camera_controls()
         self.freeze_cam = False
+        self.oob_event_provider.enable_random_start()
+        self.camera_controls.restore_controls()
 
     def screen_shake_callback(self, checked: bool):
         if checked:
@@ -245,9 +247,14 @@ class ModMain:
 
     def set_camera_pinning_mode(self, mode: bool):
         self.offmap_hkey.use_camera_pinning = mode
+        if not mode:
+            self.camera_controls.restore_controls()
 
     def offmap_hotkey_state_callback(self, state: bool):
         self.offmap_hotkey_active = state
+        if not state:
+            self.oob_event_provider.enable_random_start()
+            self.camera_controls.restore_controls()
 
     def matches_saved_hotkey(self, key_info: KeyInfo):
         if key_info.vk_code != self.offmap_hotkey['main_vk']:

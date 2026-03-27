@@ -3,7 +3,7 @@ from outofbounds_event_provider import OutOfBoundsEventProvider
 from nonspec_camera_controls import CameraControls
 import spawn_point_provider
 from pms_parser import Map
-
+import logging
 
 class OffmapHotkey:
     def __init__(
@@ -26,8 +26,11 @@ class OffmapHotkey:
         self.camera_controls = camera_controls
         self.oob_provider = oob_provider
 
-    def on_map_change(self, _: str) -> None:
-        current_map = Map.from_file(self.api.map_graphics.get_filename())
+    def on_map_change(self, map_name: str) -> None:
+        map_file_name = self.api.map_graphics.get_filename()
+        current_map = Map.from_file(map_file_name)
+        if map_name not in map_file_name:
+            logging.warning("Map name mismatch, MapGraphics may be out of sync")
         self.map_bound = current_map.numSectors * current_map.sectorsDivision - 50
         self.current_map_spawn_points_alpha = spawn_point_provider.get_current_spawnpoints(self.api, 1)
         self.current_map_spawn_points_bravo = spawn_point_provider.get_current_spawnpoints(self.api, 2)
@@ -60,6 +63,12 @@ class OffmapHotkey:
         self.api.set_camera_position(self.random_spawn)
 
     def tick(self):
+        if self.on_limbo and self.own_player.get_is_dead():
+            self.oob_provider.enable_random_start()
+            if self.use_camera_pinning:
+                self.camera_controls.restore_controls()
+            self.on_limbo = False
+            return
         self.current_team = self.own_player.team
         if self.on_limbo and self.oob_provider.is_oob():
             self.on_respawn()
