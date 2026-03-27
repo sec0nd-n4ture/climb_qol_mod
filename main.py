@@ -115,8 +115,8 @@ class ModMain:
         self.circular_menu.outline_toggle_button.set_action_callback(self.outline_provider.hide)
         self.circular_menu.outline_settings_button.set_action_callback(self.ui.show)
         self.circular_menu.mode_cycle_button.set_callback(self.set_wireframe_mode)
-        self.circular_menu.scenery_toggle_button.set_action_callback(self.enable_props)
-        self.circular_menu.scenery_toggle_button.toggled_action_callback(self.disable_props)
+        self.circular_menu.scenery_toggle_button.set_action_callback(self.disable_props)
+        self.circular_menu.scenery_toggle_button.toggled_action_callback(self.enable_props)
         self.circular_menu.outline_toggle_button.toggled = self.menu_states["outline_toggled"]
         self.circular_menu.outline_toggle_button.toggle()
         if not self.menu_states["dark_mode"]: self.circular_menu.toggle_color_mode()
@@ -185,12 +185,12 @@ class ModMain:
             self.api.restore_camera_controls()
             self.freeze_cam = False
 
-    def enable_props(self):
+    def disable_props(self):
         self.api.disable_props0_layer()
         self.api.disable_props1_layer()
         self.api.disable_props2_layer()
 
-    def disable_props(self):
+    def enable_props(self):
         self.api.enable_props0_layer()
         self.api.enable_props1_layer()
         self.api.enable_props2_layer()
@@ -241,9 +241,7 @@ class ModMain:
         if not self.game_focused or not self.offmap_hotkey_active:
             return
         if self.matches_saved_hotkey(key_info):
-            if self.offmap_hotkey_active:
-                self.offmap_hkey.on_offmap_hotkey_pressed()
-
+            self.offmap_hkey.on_offmap_hotkey_pressed()
 
     def set_camera_pinning_mode(self, mode: bool):
         self.offmap_hkey.use_camera_pinning = mode

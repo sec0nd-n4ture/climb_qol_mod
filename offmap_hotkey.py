@@ -57,8 +57,7 @@ class OffmapHotkey:
         self.own_player.set_velocity(Vector2D.zero())
 
     def pin_camera(self):
-        if self.use_camera_pinning:
-            self.api.set_camera_position(self.random_spawn)
+        self.api.set_camera_position(self.random_spawn)
 
     def tick(self):
         self.current_team = self.own_player.team
