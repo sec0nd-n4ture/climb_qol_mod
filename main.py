@@ -174,6 +174,7 @@ class ModMain:
         self.hotkey_settings = None
         self.oob_event_provider.enable_random_start()
         self.camera_controls.restore_controls()
+        self.offmap_hotkey_active = False
 
     def on_save(self, config: dict[str, str]):
         with open("config.json", "w") as f:
