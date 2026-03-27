@@ -158,6 +158,7 @@ class ModMain:
         self.hotkey_settings.rows[0].keybind_button.key_display_text.set_text(key_text)
         self.circular_menu.offmap_settings_button.set_action_callback(self.hotkey_settings.show)
         self.api.enable_drawing()
+        self.offmap_hkey.own_player = self.api.get_player(self.api.get_own_id())
 
     def on_dx_not_ready(self):
         self.api.disable_drawing()
