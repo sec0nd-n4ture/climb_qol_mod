@@ -28,6 +28,13 @@ class ModMain:
         if self.api.soldat_bridge.executable_hash != 1802620099:
             print("Unsupported version for mod, exiting...")
             sys.exit(1)
+        logger = logging.getLogger()
+        file_handler = logging.FileHandler("mod.log")
+        file_handler.setLevel(logging.WARNING)
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        sys.excepthook = self.log_unhandled
 
         self.ensure_default_configs()
         with open("config.json", "r") as f:
@@ -164,6 +171,8 @@ class ModMain:
         self.ui = None
         self.circular_menu = None
         self.hotkey_settings = None
+        self.oob_event_provider.enable_random_start()
+        self.camera_controls.restore_controls()
 
     def on_save(self, config: dict[str, str]):
         with open("config.json", "w") as f:
@@ -223,8 +232,6 @@ class ModMain:
         self.api.restore_cursor_controls()
         self.api.restore_camera_controls()
         self.freeze_cam = False
-        self.oob_event_provider.enable_random_start()
-        self.camera_controls.restore_controls()
 
     def screen_shake_callback(self, checked: bool):
         if checked:
@@ -329,6 +336,9 @@ class ModMain:
         if not os.path.exists("hotkey.json"):
             with open("hotkey.json", "w") as f:
                 json.dump({"main_vk": 67, "modifiers": []}, f)
+
+    def log_unhandled(exc_type, exc_value, exc_tb):
+        logging.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
 
 
 if __name__ == "__main__":
