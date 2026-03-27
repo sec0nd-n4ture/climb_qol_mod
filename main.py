@@ -175,6 +175,8 @@ class ModMain:
         self.oob_event_provider.enable_random_start()
         self.camera_controls.restore_controls()
         self.offmap_hotkey_active = False
+        self.offmap_hkey.use_camera_pinning = False
+        self.screen_shake_patch.remove_patch()
 
     def on_save(self, config: dict[str, str]):
         with open("config.json", "w") as f:
