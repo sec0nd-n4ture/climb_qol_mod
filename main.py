@@ -2,8 +2,8 @@ from soldat_extmod_api.interprocess_utils.kernel_wrapper import GetKeyState
 from soldat_extmod_api.event_dispatcher import KeyInfo, VK_KEYCODE
 from ui.edit_keybind_button import MODIFIER_TO_VK, VK_TO_MODIFIER
 from outofbounds_event_provider import OutOfBoundsEventProvider
+from soldat_extmod_api.mod_api import ModAPI, Event, Vector2D
 from ui.offmap_hotkey_settings import OffmapHotkeySettings
-from soldat_extmod_api.mod_api import ModAPI, Event
 from nonspec_camera_controls import CameraControls
 from screen_shake_patch import ScreenShakePatch
 from outline_provider import OutlineProvider
@@ -61,6 +61,7 @@ class ModMain:
         self.api.subscribe_event(self.on_di_ready, Event.DINPUT_READY)
         self.api.subscribe_event(self.on_any_key_up, Event.KEYBOARD_KEYUP)
         self.api.subscribe_event(self.on_any_key_up, Event.MOUSE_KEYUP)
+        self.api.subscribe_event(self.on_mouse_left_down, Event.MOUSE_DOWN)
         self.outline_provider = OutlineProvider(self.config, self.api)
         self.api.subscribe_event(self.outline_provider.update_wireframe, Event.DIRECTX_READY)
         self.freeze_cam = False
@@ -225,6 +226,14 @@ class ModMain:
             self.ui.hide()
         self.hotkey_settings.show()
 
+    def on_mouse_left_down(self, _):
+        if not self.game_focused or not self.ui.hidden or not self.hotkey_settings.hidden:
+            return
+        if self.own_player.team == 3:
+            mouse_w_pos = self.own_player.get_mouse_world_pos()
+            self.own_player.set_position(Vector2D(float(mouse_w_pos.x), float(mouse_w_pos.y)))
+            self.own_player.set_velocity(Vector2D.zero())
+
 # ================= HELPERS ================= #
 
     def matches_saved_hotkey(self, key_info: KeyInfo):
@@ -293,8 +302,8 @@ class ModMain:
             with open("hotkey.json", "w") as f:
                 json.dump({"main_vk": 67, "modifiers": []}, f)
 
-    def log_unhandled(exc_type, exc_value, exc_tb):
-        logging.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
+    def log_unhandled(self, exc_type, exc_value, exc_traceback):
+        logging.critical("Unhandled exception: ", exc_info=(exc_type, exc_value, exc_traceback))
 
     def create_ui(self):
         self.ui = ConfigUI(self.api, 0, 0, self.config, self.on_save)
