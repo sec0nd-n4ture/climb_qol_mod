@@ -43,6 +43,7 @@ class ModMain:
         self.screen_shake_patch = ScreenShakePatch(self.api)
         self.screen_shake_patch.remove_patch()
         self.offmap_hotkey_active = False
+        self.ui_destroyed = False
         self.camera_controls = CameraControls(self.api)
         self.maintickcounter_addr = int.from_bytes(
             self.api.soldat_bridge.read(MAINTICKCOUNTER_PTR, 4), 
@@ -71,6 +72,7 @@ class ModMain:
         self.oob_event_provider = OutOfBoundsEventProvider(self.api, self.own_player.tsprite_object_addr)
         self.oob_event_provider.patch()
         self.offmap_hkey = OffmapHotkey(self.api, self.camera_controls, self.oob_event_provider)
+        self.last_map_name = ""
 
     def main_loop(self):
         missed_tick_total = 0
@@ -94,15 +96,16 @@ class ModMain:
                     self.api.tick_event_dispatcher()
                 if self.circular_menu:
                     self.circular_menu.update_transitions()
-                    time.sleep(0.00001)
+                time.sleep(0.00001)
             except KeyboardInterrupt:
                 break
         logging.info(f"Total missed ticks: {missed_tick_total}")
 
 # ================= EVENT HANDLERS ================= #
 
-    def on_map_change(self, _) -> None:
+    def on_map_change(self, map_name: str) -> None:
         self.outline_provider.update_wireframe()
+        self.last_map_name = map_name
 
     def on_every_tick(self, tick: int):
         if self.ui and not self.ui.hidden:
@@ -159,24 +162,27 @@ class ModMain:
         self.circular_menu.offmap_settings_button.set_action_callback(self.hotkey_settings.show)
         self.api.enable_drawing()
         self.offmap_hkey.own_player = self.api.get_player(self.api.get_own_id())
+        self.ui_destroyed = False
 
     def on_dx_not_ready(self):
-        self.api.disable_drawing()
-        self.menu_states["dark_mode"] = self.circular_menu.dark_mode
-        self.menu_states["outline_toggled"] = self.circular_menu.outline_toggle_button.toggled
-        self.menu_states["outline_mode"] = self.circular_menu.mode_cycle_button.state
-        self.menu_states["scenery_toggled"] = self.circular_menu.scenery_toggle_button.toggled
-        self.circular_menu.destroy()
-        self.ui.destroy()
-        self.hotkey_settings.destroy()
-        self.ui = None
-        self.circular_menu = None
-        self.hotkey_settings = None
-        self.oob_event_provider.enable_random_start()
-        self.camera_controls.restore_controls()
-        self.offmap_hotkey_active = False
-        self.offmap_hkey.use_camera_pinning = False
-        self.screen_shake_patch.remove_patch()
+        if not self.ui_destroyed:
+            self.api.disable_drawing()
+            self.menu_states["dark_mode"] = self.circular_menu.dark_mode
+            self.menu_states["outline_toggled"] = self.circular_menu.outline_toggle_button.toggled
+            self.menu_states["outline_mode"] = self.circular_menu.mode_cycle_button.state
+            self.menu_states["scenery_toggled"] = self.circular_menu.scenery_toggle_button.toggled
+            self.circular_menu.destroy()
+            self.ui.destroy()
+            self.hotkey_settings.destroy()
+            self.ui = None
+            self.circular_menu = None
+            self.hotkey_settings = None
+            self.oob_event_provider.enable_random_start()
+            self.camera_controls.restore_controls()
+            self.offmap_hotkey_active = False
+            self.offmap_hkey.use_camera_pinning = False
+            self.screen_shake_patch.remove_patch()
+            self.ui_destroyed = True
 
     def on_save(self, config: dict[str, str]):
         with open("config.json", "w") as f:
@@ -303,13 +309,7 @@ class ModMain:
                 self.map_name_addr, name_length
             ).decode("utf-8")
         else:
-            while name_length == 0:
-                name_length = int.from_bytes(
-                    self.api.soldat_bridge.read(self.map_name_len_addr, 1), "little"
-                )
-            return self.api.soldat_bridge.read(
-                self.map_name_addr, name_length
-            ).decode("utf-8")
+            return self.last_map_name
 
     def get_ticks(self):
         cur_tick = self.api.soldat_bridge.read(self.maintickcounter_addr, 4)
