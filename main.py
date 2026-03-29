@@ -119,70 +119,10 @@ class ModMain:
             self.offmap_hkey.tick()
 
     def on_dx_ready(self):
-        self.ui = ConfigUI(self.api, 0, 0, self.config, self.on_save)
-        self.circular_menu = CircularMenu(self.api, self.api.get_gui_frame())
-        self.circular_menu.outline_toggle_button.toggled_action_callback(self.outline_provider.show)
-        self.circular_menu.outline_toggle_button.set_action_callback(self.outline_provider.hide)
-        self.circular_menu.outline_settings_button.set_action_callback(self.ui.show)
-        self.circular_menu.mode_cycle_button.set_callback(self.set_wireframe_mode)
-        self.circular_menu.scenery_toggle_button.set_action_callback(self.disable_props)
-        self.circular_menu.scenery_toggle_button.toggled_action_callback(self.enable_props)
-        self.circular_menu.outline_toggle_button.toggled = self.menu_states["outline_toggled"]
-        self.circular_menu.outline_toggle_button.toggle()
-        if not self.menu_states["dark_mode"]: self.circular_menu.toggle_color_mode()
-        self.circular_menu.mode_cycle_button.state = self.menu_states["outline_mode"]
-        self.circular_menu.mode_cycle_button.apply_mode()
-        self.circular_menu.scenery_toggle_button.toggled = self.menu_states["scenery_toggled"]
-        self.circular_menu.scenery_toggle_button.toggle()
-        self.hotkey_settings = OffmapHotkeySettings(
-            self.api, 0, 0,
-            self.screen_shake_callback,
-            self.key_bind_save_callback,
-            self.set_camera_pinning_mode,
-            self.offmap_hotkey_state_callback
-        )
-        if self.offmap_hotkey:
-            main_vk = self.offmap_hotkey['main_vk']
-            mod_vks = self.offmap_hotkey.get('modifiers', [])
-
-            mod_names = [VK_TO_MODIFIER[vk] for vk in mod_vks if vk in VK_TO_MODIFIER]
-
-            mod_str = " + ".join(mod_names) + (" + " if mod_names else "")
-
-            if (0x30 <= main_vk <= 0x39) or (0x41 <= main_vk <= 0x5A):
-                main_name = chr(main_vk).upper()
-            else:
-                main_name = next((m.name[3:].capitalize() for m in VK_KEYCODE if m.value == main_vk), f"VK_{main_vk:02X}")
-
-            key_text = (mod_str + main_name).upper()
-        else:
-            key_text = "NOT SET"
-
-        self.hotkey_settings.rows[0].keybind_button.key_display_text.set_text(key_text)
-        self.circular_menu.offmap_settings_button.set_action_callback(self.hotkey_settings.show)
-        self.api.enable_drawing()
-        self.offmap_hkey.own_player = self.api.get_player(self.api.get_own_id())
-        self.ui_destroyed = False
+        self.create_ui()
 
     def on_dx_not_ready(self):
-        if not self.ui_destroyed:
-            self.api.disable_drawing()
-            self.menu_states["dark_mode"] = self.circular_menu.dark_mode
-            self.menu_states["outline_toggled"] = self.circular_menu.outline_toggle_button.toggled
-            self.menu_states["outline_mode"] = self.circular_menu.mode_cycle_button.state
-            self.menu_states["scenery_toggled"] = self.circular_menu.scenery_toggle_button.toggled
-            self.circular_menu.destroy()
-            self.ui.destroy()
-            self.hotkey_settings.destroy()
-            self.ui = None
-            self.circular_menu = None
-            self.hotkey_settings = None
-            self.oob_event_provider.enable_random_start()
-            self.camera_controls.restore_controls()
-            self.offmap_hotkey_active = False
-            self.offmap_hkey.use_camera_pinning = False
-            self.screen_shake_patch.remove_patch()
-            self.ui_destroyed = True
+        self.destroy_ui()
 
     def on_save(self, config: dict[str, str]):
         with open("config.json", "w") as f:
@@ -275,6 +215,18 @@ class ModMain:
             self.oob_event_provider.enable_random_start()
             self.camera_controls.restore_controls()
 
+    def show_outline_config_ui(self):
+        if not self.hotkey_settings.hidden:
+            self.hotkey_settings.hide()
+        self.ui.show()
+
+    def show_hotkey_settings(self):
+        if not self.ui.hidden:
+            self.ui.hide()
+        self.hotkey_settings.show()
+
+# ================= HELPERS ================= #
+
     def matches_saved_hotkey(self, key_info: KeyInfo):
         if key_info.vk_code != self.offmap_hotkey['main_vk']:
             return False
@@ -289,8 +241,6 @@ class ModMain:
             return False
 
         return True
-
-# ================= HELPERS ================= #
 
     def get_dx_state(self) -> bool:
         return bool.from_bytes(
@@ -345,6 +295,72 @@ class ModMain:
 
     def log_unhandled(exc_type, exc_value, exc_tb):
         logging.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
+
+    def create_ui(self):
+        self.ui = ConfigUI(self.api, 0, 0, self.config, self.on_save)
+        self.circular_menu = CircularMenu(self.api, self.api.get_gui_frame())
+        self.circular_menu.outline_toggle_button.toggled_action_callback(self.outline_provider.show)
+        self.circular_menu.outline_toggle_button.set_action_callback(self.outline_provider.hide)
+        self.circular_menu.outline_settings_button.set_action_callback(self.show_outline_config_ui)
+        self.circular_menu.mode_cycle_button.set_callback(self.set_wireframe_mode)
+        self.circular_menu.scenery_toggle_button.set_action_callback(self.disable_props)
+        self.circular_menu.scenery_toggle_button.toggled_action_callback(self.enable_props)
+        self.circular_menu.outline_toggle_button.toggled = self.menu_states["outline_toggled"]
+        self.circular_menu.outline_toggle_button.toggle()
+        if not self.menu_states["dark_mode"]: self.circular_menu.toggle_color_mode()
+        self.circular_menu.mode_cycle_button.state = self.menu_states["outline_mode"]
+        self.circular_menu.mode_cycle_button.apply_mode()
+        self.circular_menu.scenery_toggle_button.toggled = self.menu_states["scenery_toggled"]
+        self.circular_menu.scenery_toggle_button.toggle()
+        self.hotkey_settings = OffmapHotkeySettings(
+            self.api, 0, 0,
+            self.screen_shake_callback,
+            self.key_bind_save_callback,
+            self.set_camera_pinning_mode,
+            self.offmap_hotkey_state_callback
+        )
+        if self.offmap_hotkey:
+            main_vk = self.offmap_hotkey['main_vk']
+            mod_vks = self.offmap_hotkey.get('modifiers', [])
+
+            mod_names = [VK_TO_MODIFIER[vk] for vk in mod_vks if vk in VK_TO_MODIFIER]
+
+            mod_str = " + ".join(mod_names) + (" + " if mod_names else "")
+
+            if (0x30 <= main_vk <= 0x39) or (0x41 <= main_vk <= 0x5A):
+                main_name = chr(main_vk).upper()
+            else:
+                main_name = next((m.name[3:].capitalize() for m in VK_KEYCODE if m.value == main_vk), f"VK_{main_vk:02X}")
+
+            key_text = (mod_str + main_name).upper()
+        else:
+            key_text = "NOT SET"
+
+        self.hotkey_settings.rows[0].keybind_button.key_display_text.set_text(key_text)
+        self.circular_menu.offmap_settings_button.set_action_callback(self.show_hotkey_settings)
+        self.api.enable_drawing()
+        self.offmap_hkey.own_player = self.api.get_player(self.api.get_own_id())
+        self.ui_destroyed = False
+
+    def destroy_ui(self):
+        if not self.ui_destroyed:
+            self.api.disable_drawing()
+            self.menu_states["dark_mode"] = self.circular_menu.dark_mode
+            self.menu_states["outline_toggled"] = self.circular_menu.outline_toggle_button.toggled
+            self.menu_states["outline_mode"] = self.circular_menu.mode_cycle_button.state
+            self.menu_states["scenery_toggled"] = self.circular_menu.scenery_toggle_button.toggled
+            self.circular_menu.destroy()
+            self.ui.destroy()
+            self.hotkey_settings.destroy()
+            self.ui = None
+            self.circular_menu = None
+            self.hotkey_settings = None
+            self.oob_event_provider.enable_random_start()
+            self.camera_controls.restore_controls()
+            self.offmap_hotkey_active = False
+            self.offmap_hkey.use_camera_pinning = False
+            self.screen_shake_patch.remove_patch()
+            self.ui_destroyed = True
 
 
 if __name__ == "__main__":
