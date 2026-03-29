@@ -251,7 +251,9 @@ class ModMain:
                 self.offmap_hotkey = hotkey
 
     def on_any_key_up(self, key_info: KeyInfo):
-        if not self.game_focused or not self.offmap_hotkey_active:
+        if (not self.game_focused or 
+            not self.offmap_hotkey_active or
+            self.api.is_chat_open()):
             return
         if self.matches_saved_hotkey(key_info):
             self.offmap_hkey.on_offmap_hotkey_pressed()
