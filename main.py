@@ -74,6 +74,8 @@ class ModMain:
         self.oob_event_provider.patch()
         self.offmap_hkey = OffmapHotkey(self.api, self.camera_controls, self.oob_event_provider)
         self.last_map_name = ""
+        self.ui = None
+        self.hotkey_settings = None
 
     def main_loop(self):
         missed_tick_total = 0
@@ -228,6 +230,8 @@ class ModMain:
         self.hotkey_settings.show()
 
     def on_mouse_left_down(self, _):
+        if not self.ui:
+            return
         if not self.game_focused or not self.ui.hidden or not self.hotkey_settings.hidden:
             return
         if self.own_player.team == 3:
