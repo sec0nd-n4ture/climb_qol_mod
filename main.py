@@ -121,6 +121,7 @@ class ModMain:
 
     def on_dx_ready(self):
         self.create_ui()
+        self.own_player = self.api.get_player(self.api.get_own_id())
 
     def on_dx_not_ready(self):
         self.destroy_ui()
