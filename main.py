@@ -76,6 +76,7 @@ class ModMain:
         self.last_map_name = ""
         self.ui = None
         self.hotkey_settings = None
+        self.fast_tp_disabled = True
 
     def main_loop(self):
         missed_tick_total = 0
@@ -136,14 +137,20 @@ class ModMain:
         self.outline_provider.update_wireframe()
 
     def on_lcontrol_down(self):
-        if self.game_focused and self.api.get_player(self.api.get_own_id()).team == 5:
+        if not self.game_focused:
+            return
+        self.fast_tp_disabled = False
+        if self.api.get_player(self.api.get_own_id()).team == 5:
             if not self.freeze_cam:
                 self.api.take_cursor_controls()
                 self.api.take_camera_controls()
                 self.freeze_cam = True
 
     def on_lcontrol_up(self):
-        if self.game_focused and self.api.get_player(self.api.get_own_id()).team == 5:
+        if not self.game_focused:
+            return
+        self.fast_tp_disabled = True
+        if self.api.get_player(self.api.get_own_id()).team == 5:
             self.api.restore_cursor_controls()
             self.api.restore_camera_controls()
             self.freeze_cam = False
@@ -234,7 +241,7 @@ class ModMain:
             return
         if not self.game_focused or not self.ui.hidden or not self.hotkey_settings.hidden:
             return
-        if self.own_player.team == 3:
+        if self.own_player.team == 3 and not self.fast_tp_disabled:
             mouse_w_pos = self.own_player.get_mouse_world_pos()
             self.own_player.set_position(Vector2D(float(mouse_w_pos.x), float(mouse_w_pos.y)))
             self.own_player.set_velocity(Vector2D.zero())
