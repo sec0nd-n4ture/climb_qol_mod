@@ -22,9 +22,12 @@ class SpawnType(Enum):
     YellowFlag = 14
     RamboBow = 15
     StatGun = 16
+    Unknown = 255
 
 class SpawnPoint:
-    def __init__(self, active, x, y, spawn_type: SpawnType):
+    def __init__(self, active, x, y, spawn_type: int):
+        if spawn_type < 0 or spawn_type > 16:
+            spawn_type = 255
         self.active = active
         self.x = x
         self.y = y
