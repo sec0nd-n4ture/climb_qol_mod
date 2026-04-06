@@ -1,9 +1,10 @@
+from ui.config_buttons import CycleButton, CloseButton, SaveButton, LoadButton, DefaultButton
 from ui.slider_container import TransparencySliderContainer, BrightnessSliderContainer
 from soldat_extmod_api.mod_api import ModAPI, Color, FontStyle, Vector2D
 from soldat_extmod_api.graphics_helper.sm_text import CharacterSize
-from ui.config_buttons import CycleButton, CloseButton, SaveButton
 from soldat_extmod_api.graphics_helper.gui_addon import Container
 from ui.hsv_color_wheel import HSVColorWheel
+from ui.file_explorer import FileExplorer
 from poly_type import PolyType
 from typing import Callable
 
@@ -15,9 +16,13 @@ class ConfigUI(Container):
             padding_x: float, 
             padding_y: float,
             config: dict[str, str],
-            save_callback: Callable[[dict[str, str]], None]
+            save_callback: Callable[[dict[str, str]], None],
+            file_pick_callback: Callable[[str], None],
+            set_default_callback: Callable[[], None]
         ):
+        self.file_pick_callback = file_pick_callback
         self.save_callback = save_callback
+        self.set_default_callback = set_default_callback
         self.config = config.copy()
         self.current_poly_type = 0
         self.title_text = mod_api.create_interface_text(
@@ -29,6 +34,16 @@ class ConfigUI(Container):
             Vector2D(0.8, 1.6),
             FontStyle.FONT_SMALL_BOLD,
             0.8
+        )
+        self.current_config = mod_api.create_interface_text(
+            "config.json",
+            Vector2D.zero(),
+            Color.from_hex("ffffffff"),
+            Color.from_hex("000000ff"),
+            1.0,
+            Vector2D(0.3, 0.6),
+            FontStyle.FONT_WEAPONS_MENU,
+            0.3
         )
         cur_poly_type_name = PolyType._value2member_map_[self.current_poly_type].name
         self.poly_type_text_scale = 0.7
@@ -70,11 +85,17 @@ class ConfigUI(Container):
         self.cycle_button_right.set_pos(self.corner_bottom_right.add(Vector2D(-25.0, 0.0)))
         self.cycle_button_left.set_pos(self.corner_bottom_left.add(Vector2D(8.0, 0.0)))
         self.set_polygon_type_text(cur_poly_type_name)
-        self.close_button = CloseButton(self.api, self, 0, 0, self.hide)
-        self.close_button.set_pos(self.corner_top_right - Vector2D(15.0, -2.0))
         self.save_button = SaveButton(self.api, self, 0, 0)
-        self.save_button.set_pos(self.corner_bottom_left + Vector2D(80.0, 16.0))
+        self.save_button.set_pos(self.corner_bottom_left + Vector2D(120.0, 16.0))
         self.save_button.action = self.save_action
+
+        self.load_button = LoadButton(self.api, self, 0, 0)
+        self.load_button.set_pos(self.corner_bottom_left + Vector2D(80.0, 16.0))
+        self.load_button.action = self.switch_to_config_explorer
+
+        self.default_button = DefaultButton(self.api, self, 0, 0)
+        self.default_button.set_pos(self.corner_bottom_left + Vector2D(40.0, 16.0))
+        self.default_button.action = self.set_default_callback
 
         self.brightness_container = BrightnessSliderContainer(
             self.api, self.api.get_gui_frame(), 0, 65.0, self.on_brightness_change
@@ -107,12 +128,17 @@ class ConfigUI(Container):
             FontStyle.FONT_SMALL_BOLD,
             0.5
         )
-
+        self.config_explorer = FileExplorer(
+            self.api, *self.padding.to_tuple(), self.file_pick_callback_proxy
+        )
+        self.close_button = CloseButton(self.api, self, 0, 0, self.hide)
+        self.close_button.set_pos(self.corner_top_right - Vector2D(15.0, -2.0))
         self.hide()
 
     def set_pos(self, pos: Vector2D):
         super().set_pos(pos)
         self.title_text.set_pos(pos + Vector2D(35.0, 9.0))
+        self.current_config.set_pos(self.corner_top_left)
 
     def hide(self):
         if not self.hidden:
@@ -129,6 +155,10 @@ class ConfigUI(Container):
             self.transparency_container.hide()
             self.transparency_text.hide()
             self.save_button.hide()
+            self.load_button.hide()
+            self.default_button.hide()
+            self.config_explorer.hide()
+            self.current_config.hide()
 
     def show(self):
         if self.hidden:
@@ -145,6 +175,9 @@ class ConfigUI(Container):
             self.transparency_container.show()
             self.transparency_text.show()
             self.save_button.show()
+            self.load_button.show()
+            self.default_button.show()
+            self.current_config.show()
 
     def destroy(self):
         self.hide()
@@ -156,6 +189,9 @@ class ConfigUI(Container):
         self.brightness_container.destroy()
         self.transparency_container.destroy()
         self.save_button.destroy()
+        self.load_button.destroy()
+        self.default_button.destroy()
+        self.config_explorer.destroy()
 
     def on_color_change(self, color: bytes):
         self.current_poly_text.set_text_color(Color.from_bytes(color))
@@ -193,3 +229,18 @@ class ConfigUI(Container):
 
         self.current_poly_text.set_text(text)
         self.current_poly_text.set_pos((self.corner_bottom_left + Vector2D(85.0, 10.0)) - self.text_center_offset)
+
+    def switch_to_config_explorer(self):
+        self.hide()
+        self.config_explorer.show()
+        self.close_button.show()
+        self.close_button.action = self.hide_config_explorer
+
+    def hide_config_explorer(self):
+        self.config_explorer.hide()
+        self.close_button.action = self.hide
+        self.close_button.hide()
+
+    def file_pick_callback_proxy(self, file_name: str):
+        self.file_pick_callback(file_name)
+        self.hide_config_explorer()

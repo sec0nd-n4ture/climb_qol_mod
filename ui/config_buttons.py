@@ -138,3 +138,17 @@ class SaveButton(ActionButton):
     def show(self):
         super().show()
         self.button_desc.show()
+
+class LoadButton(SaveButton):
+    def __init__(self, mod_api, parent, padding_x, padding_y):
+        super().__init__(mod_api, parent, padding_x, padding_y)
+        self.button_desc.set_text("Load")
+
+class DefaultButton(SaveButton):
+    def __init__(self, mod_api, parent, padding_x, padding_y):
+        super().__init__(mod_api, parent, padding_x, padding_y)
+        self.button_desc.set_text("Set default")
+
+    def set_pos(self, pos):
+        super().set_pos(pos)
+        self.button_desc.set_pos(pos + Vector2D(-15, 20))

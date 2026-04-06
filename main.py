@@ -1,8 +1,8 @@
+from soldat_extmod_api.mod_api import ModAPI, Event, Vector2D, Color, FontStyle
 from soldat_extmod_api.interprocess_utils.kernel_wrapper import GetKeyState
 from soldat_extmod_api.event_dispatcher import KeyInfo, VK_KEYCODE
 from ui.edit_keybind_button import MODIFIER_TO_VK, VK_TO_MODIFIER
 from outofbounds_event_provider import OutOfBoundsEventProvider
-from soldat_extmod_api.mod_api import ModAPI, Event, Vector2D
 from ui.offmap_hotkey_settings import OffmapHotkeySettings
 from nonspec_camera_controls import CameraControls
 from screen_shake_patch import ScreenShakePatch
@@ -20,7 +20,7 @@ import os
 
 MAINTICKCOUNTER_PTR = 0x005E3C7C
 MAX_TICK = 0xFFFFFFFF
-
+MOD_VERSION_TEXT = "Climb QOL MOD 1.0"
 
 class ModMain:
     def __init__(self) -> None:
@@ -37,8 +37,9 @@ class ModMain:
         sys.excepthook = self.log_unhandled
 
         self.ensure_default_configs()
-        with open("config.json", "r") as f:
-            self.config: dict[str, str] = json.load(f)
+        self.mod_config = self.load_mod_config()
+        self.current_color_config = self.mod_config["color_config_file"]
+        self.config = self.load_color_config(self.current_color_config)
         self.offmap_hotkey = self.load_hotkey()
         self.screen_shake_patch = ScreenShakePatch(self.api)
         self.screen_shake_patch.remove_patch()
@@ -67,8 +68,16 @@ class ModMain:
         self.freeze_cam = False
         self.circular_menu: None | CircularMenu = None
         self.game_focused = False
-        with open("menu_states.json", "r") as f:
-            self.menu_states = json.load(f)
+        self.version_text = self.api.create_interface_text(
+            MOD_VERSION_TEXT,
+            Vector2D(self.api.get_gui_frame().position.x * 2 - 65, self.api.get_gui_frame().position.y * 2 - 10),
+            Color.from_hex("ffffffff"),
+            Color.from_hex("000000ff"),
+            1.0,
+            Vector2D(0.4, 0.8),
+            FontStyle.FONT_WEAPONS_MENU,
+            0.4
+        )
         self.own_player = self.api.get_player(self.api.get_own_id())
         self.oob_event_provider = OutOfBoundsEventProvider(self.api, self.own_player.tsprite_object_addr)
         self.oob_event_provider.patch()
@@ -130,7 +139,7 @@ class ModMain:
         self.destroy_ui()
 
     def on_save(self, config: dict[str, str]):
-        with open("config.json", "w") as f:
+        with open(self.current_color_config, "w") as f:
             json.dump(config, f, indent=4)
         self.config = config.copy()
         self.outline_provider.config = config.copy()
@@ -246,6 +255,18 @@ class ModMain:
             self.own_player.set_position(Vector2D(float(mouse_w_pos.x), float(mouse_w_pos.y)))
             self.own_player.set_velocity(Vector2D.zero())
 
+    def on_file_pick(self, file_name: str):
+        self.config = self.load_color_config(file_name)
+        self.outline_provider.config = self.config.copy()
+        self.outline_provider.update_wireframe()
+        self.ui.config = self.config.copy()
+        self.ui.current_config.set_text(file_name)
+        self.current_color_config = file_name
+
+    def on_set_default_clicked(self):
+        self.mod_config["color_config_file"] = self.current_color_config
+        self.update_mod_config("color_config_file", self.current_color_config)
+
 # ================= HELPERS ================= #
 
     def matches_saved_hotkey(self, key_info: KeyInfo):
@@ -295,19 +316,30 @@ class ModMain:
         with open("hotkey.json", "r") as f:
             return json.load(f)
 
+    def load_color_config(self, file_name: str) -> dict[str, str]:
+        if not os.path.exists(file_name):
+            file_name = "config.json"
+        with open(file_name, "r") as f:
+            return json.load(f)
+
+    def load_mod_config(self):
+        with open("mod_config.json", "r") as f:
+            return json.load(f)
+
     def ensure_default_configs(self):
         if not os.path.exists("config.json"):
             default_colors = {member.name: "ffffffff" for member in PolyType}
             with open("config.json", "w") as f:
                 json.dump(default_colors, f, indent=4)
 
-        if not os.path.exists("menu_states.json"):
-            with open("menu_states.json", "w") as f:
+        if not os.path.exists("mod_config.json"):
+            with open("mod_config.json", "w") as f:
                 json.dump({
                     "dark_mode": True,
                     "outline_toggled": False,
                     "outline_mode": 1,
-                    "scenery_toggled": True
+                    "scenery_toggled": True,
+                    "color_config_file": "config.json"
                 },f, indent=4)
 
         if not os.path.exists("hotkey.json"):
@@ -318,7 +350,8 @@ class ModMain:
         logging.critical("Unhandled exception: ", exc_info=(exc_type, exc_value, exc_traceback))
 
     def create_ui(self):
-        self.ui = ConfigUI(self.api, 0, 0, self.config, self.on_save)
+        self.ui = ConfigUI(self.api, 0, 0, self.config, self.on_save, self.on_file_pick, self.on_set_default_clicked)
+        self.ui.current_config.set_text(self.current_color_config)
         self.circular_menu = CircularMenu(self.api, self.api.get_gui_frame())
         self.circular_menu.outline_toggle_button.toggled_action_callback(self.outline_provider.show)
         self.circular_menu.outline_toggle_button.set_action_callback(self.outline_provider.hide)
@@ -326,12 +359,12 @@ class ModMain:
         self.circular_menu.mode_cycle_button.set_callback(self.set_wireframe_mode)
         self.circular_menu.scenery_toggle_button.set_action_callback(self.disable_props)
         self.circular_menu.scenery_toggle_button.toggled_action_callback(self.enable_props)
-        self.circular_menu.outline_toggle_button.toggled = self.menu_states["outline_toggled"]
+        self.circular_menu.outline_toggle_button.toggled = self.mod_config["outline_toggled"]
         self.circular_menu.outline_toggle_button.toggle()
-        if not self.menu_states["dark_mode"]: self.circular_menu.toggle_color_mode()
-        self.circular_menu.mode_cycle_button.state = self.menu_states["outline_mode"]
+        if not self.mod_config["dark_mode"]: self.circular_menu.toggle_color_mode()
+        self.circular_menu.mode_cycle_button.state = self.mod_config["outline_mode"]
         self.circular_menu.mode_cycle_button.apply_mode()
-        self.circular_menu.scenery_toggle_button.toggled = self.menu_states["scenery_toggled"]
+        self.circular_menu.scenery_toggle_button.toggled = self.mod_config["scenery_toggled"]
         self.circular_menu.scenery_toggle_button.toggle()
         self.hotkey_settings = OffmapHotkeySettings(
             self.api, 0, 0,
@@ -366,10 +399,10 @@ class ModMain:
     def destroy_ui(self):
         if not self.ui_destroyed:
             self.api.disable_drawing()
-            self.menu_states["dark_mode"] = self.circular_menu.dark_mode
-            self.menu_states["outline_toggled"] = self.circular_menu.outline_toggle_button.toggled
-            self.menu_states["outline_mode"] = self.circular_menu.mode_cycle_button.state
-            self.menu_states["scenery_toggled"] = self.circular_menu.scenery_toggle_button.toggled
+            self.mod_config["dark_mode"] = self.circular_menu.dark_mode
+            self.mod_config["outline_toggled"] = self.circular_menu.outline_toggle_button.toggled
+            self.mod_config["outline_mode"] = self.circular_menu.mode_cycle_button.state
+            self.mod_config["scenery_toggled"] = self.circular_menu.scenery_toggle_button.toggled
             self.circular_menu.destroy()
             self.ui.destroy()
             self.hotkey_settings.destroy()
@@ -383,6 +416,11 @@ class ModMain:
             self.screen_shake_patch.remove_patch()
             self.ui_destroyed = True
 
+    def update_mod_config(self, key: str, value):
+        mod_config = self.load_mod_config()
+        mod_config[key] = value
+        with open("mod_config.json", "w") as f:
+            json.dump(mod_config, f, indent=4)
 
 if __name__ == "__main__":
     main = ModMain()
