@@ -39,7 +39,7 @@ class ModMain:
         self.ensure_default_configs()
         self.mod_config = self.load_mod_config()
         self.current_color_config = self.mod_config["color_config_file"]
-        self.config = self.load_color_config(self.current_color_config)
+        self.config, _ = self.load_color_config(self.current_color_config)
         self.offmap_hotkey = self.load_hotkey()
         self.screen_shake_patch = ScreenShakePatch(self.api)
         self.screen_shake_patch.remove_patch()
@@ -256,12 +256,12 @@ class ModMain:
             self.own_player.set_velocity(Vector2D.zero())
 
     def on_file_pick(self, file_name: str):
-        self.config = self.load_color_config(file_name)
+        self.config, loaded_file_name = self.load_color_config(file_name)
         self.outline_provider.config = self.config.copy()
         self.outline_provider.update_wireframe()
         self.ui.config = self.config.copy()
-        self.ui.current_config.set_text(file_name)
-        self.current_color_config = file_name
+        self.ui.current_config.set_text(loaded_file_name)
+        self.current_color_config = loaded_file_name
 
     def on_set_default_clicked(self):
         self.mod_config["color_config_file"] = self.current_color_config
@@ -316,11 +316,23 @@ class ModMain:
         with open("hotkey.json", "r") as f:
             return json.load(f)
 
-    def load_color_config(self, file_name: str) -> dict[str, str]:
+    def load_color_config(self, file_name: str) -> tuple[dict[str, str], str]:
         if not os.path.exists(file_name):
             file_name = "config.json"
+            logging.warning(f"Attempted to load non-existent color config with file name '{file_name}', falling back to config.json")
         with open(file_name, "r") as f:
-            return json.load(f)
+            config = json.load(f)
+
+        for member in PolyType:
+            key = member.name
+            if key not in config or not isinstance(config[key], str):
+                with open("config.json", "r") as f:
+                    logging.warning(f"Attempted to load invalid color config with file name '{file_name}', falling back to config.json")
+                    config = json.load(f)
+                    file_name = "config.json"
+                    break
+
+        return config, file_name
 
     def load_mod_config(self):
         with open("mod_config.json", "r") as f:
