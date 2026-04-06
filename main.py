@@ -20,7 +20,8 @@ import os
 
 MAINTICKCOUNTER_PTR = 0x005E3C7C
 MAX_TICK = 0xFFFFFFFF
-MOD_VERSION_TEXT = "Climb QOL MOD 1.0"
+MOD_VERSION_TEXT = "Climb QOL MOD 1.0.1"
+FALLBACK_COLOR_CONFIG = "config.json"
 
 class ModMain:
     def __init__(self) -> None:
@@ -38,7 +39,14 @@ class ModMain:
 
         self.ensure_default_configs()
         self.mod_config = self.load_mod_config()
-        self.current_color_config = self.mod_config["color_config_file"]
+        if "color_config_file" in self.mod_config:
+            self.current_color_config = self.mod_config["color_config_file"]
+        else:
+            self.current_color_config = FALLBACK_COLOR_CONFIG
+            self.mod_config["color_config_file"] = FALLBACK_COLOR_CONFIG
+            with open("mod_config.json", "w") as f:
+                json.dump(self.mod_config, f, indent=4)
+
         self.config, _ = self.load_color_config(self.current_color_config)
         self.offmap_hotkey = self.load_hotkey()
         self.screen_shake_patch = ScreenShakePatch(self.api)
@@ -318,18 +326,18 @@ class ModMain:
 
     def load_color_config(self, file_name: str) -> tuple[dict[str, str], str]:
         if not os.path.exists(file_name):
-            file_name = "config.json"
-            logging.warning(f"Attempted to load non-existent color config with file name '{file_name}', falling back to config.json")
+            file_name = FALLBACK_COLOR_CONFIG
+            logging.warning(f"Attempted to load non-existent color config with file name '{file_name}', falling back to {FALLBACK_COLOR_CONFIG}")
         with open(file_name, "r") as f:
             config = json.load(f)
 
         for member in PolyType:
             key = member.name
             if key not in config or not isinstance(config[key], str):
-                with open("config.json", "r") as f:
-                    logging.warning(f"Attempted to load invalid color config with file name '{file_name}', falling back to config.json")
+                with open(FALLBACK_COLOR_CONFIG, "r") as f:
+                    logging.warning(f"Attempted to load invalid color config with file name '{file_name}', falling back to {FALLBACK_COLOR_CONFIG}")
                     config = json.load(f)
-                    file_name = "config.json"
+                    file_name = FALLBACK_COLOR_CONFIG
                     break
 
         return config, file_name
@@ -339,9 +347,9 @@ class ModMain:
             return json.load(f)
 
     def ensure_default_configs(self):
-        if not os.path.exists("config.json"):
+        if not os.path.exists(FALLBACK_COLOR_CONFIG):
             default_colors = {member.name: "ffffffff" for member in PolyType}
-            with open("config.json", "w") as f:
+            with open(FALLBACK_COLOR_CONFIG, "w") as f:
                 json.dump(default_colors, f, indent=4)
 
         if not os.path.exists("mod_config.json"):
