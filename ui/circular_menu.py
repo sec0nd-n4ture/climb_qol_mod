@@ -14,12 +14,14 @@ class CircularMenu(Container, Interactive):
         self.mode_cycle_button = OutlineCycleModeMenuButton(parent, mod_api)
         self.scenery_toggle_button = ToggleSceneryMenuButton(parent, mod_api)
         self.offmap_settings_button = OffmapSettingsMenuButton(mod_api, parent)
+        self.players_toggle_button = TogglePlayersMenuButton(parent, mod_api)
         self.buttons: list[CircularMenuButton] = [
             self.outline_toggle_button, 
             self.mode_cycle_button,
             self.outline_settings_button,
             self.offmap_settings_button,
-            self.scenery_toggle_button
+            self.scenery_toggle_button,
+            self.players_toggle_button
         ]
         image = mod_api.create_interface_image(
             "graphics/rm_logo.png", 
@@ -76,8 +78,8 @@ class CircularMenu(Container, Interactive):
             self.dimensions, 
             self.scale + Vector2D(0.2, 0.2)
         )
-        self.start_angle_rad = radians(210) # left cone
-        self.end_angle_rad = radians(140)
+        self.start_angle_rad = radians(190 + (len(self.buttons) * 5)) # left cone
+        self.end_angle_rad = radians(160 - (len(self.buttons) * 5))
         self.calculate_button_positions(initial=True)
         self.hidden = False
         self.dark_mode = True
@@ -199,7 +201,7 @@ class CircularMenu(Container, Interactive):
 
     def set_pos(self, pos: Vector2D):
         if hasattr(self, "area_trigger"):
-            self.area_trigger.position = Vector2D(self.area_trigger.position.x, pos.y - 20)
+            self.area_trigger.position = Vector2D(self.area_trigger.position.x, pos.y - 30)
         self.light_image.set_pos(pos)
         super().set_pos(pos)
 
@@ -539,4 +541,63 @@ class ToggleSceneryMenuButton(CircularMenuButton):
             self.button_icon_toggled.hide()
             self.button_icon.show()
             self.set_tooltip_text("Show scenery")
+            if self.action: self.action()
+
+class TogglePlayersMenuButton(CircularMenuButton):
+    def __init__(self, parent: Frame, mod_api: ModAPI):
+        super().__init__(mod_api, parent, "graphics/fa-eye-solid.png", "Hide players")
+        self.button_icon_toggled = mod_api.create_interface_image(
+            "graphics/fa-eye-slash-solid.png", 
+            scale=Vector2D(0.35, 0.35)
+        )
+        self.colorables.append(self.button_icon_toggled)
+        self.button_icon_toggled.hide()
+        self.toggled = False
+        self.toggled_action = None
+
+    def hide(self):
+        hidden = super().hide()
+        if hidden:
+            self.button_icon_toggled.hide()
+
+    def show(self):
+        shown = super().show()
+        if shown:
+            if self.toggled:
+                self.button_icon_toggled.show()
+                self.button_icon.hide()
+            else:
+                self.button_icon_toggled.hide()
+                self.button_icon.show()
+
+    def destroy(self):
+        super().destroy()
+        self.button_icon_toggled.destroy()
+
+    def on_mouse_release(self, position: Vector2D):
+        if self.contains_point(position):
+            self.toggled ^= True
+            self.toggle()
+
+    def set_pos(self, pos: Vector2D):
+        if hasattr(self, "button_icon_toggled"):
+            self.button_icon_toggled.set_pos(pos.sub(self.button_icon_half))
+        return super().set_pos(pos)
+    
+    def set_action_callback(self, callback: Callable):
+        return super().set_action_callback(callback)
+    
+    def toggled_action_callback(self, callback: Callable):
+        self.toggled_action = callback
+
+    def toggle(self):
+        if self.toggled:
+            self.button_icon_toggled.show()
+            self.button_icon.hide()
+            self.set_tooltip_text("Hide players")
+            if self.toggled_action: self.toggled_action()
+        else:
+            self.button_icon_toggled.hide()
+            self.button_icon.show()
+            self.set_tooltip_text("Show players")
             if self.action: self.action()
