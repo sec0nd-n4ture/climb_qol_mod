@@ -2,6 +2,7 @@ from soldat_extmod_api.mod_api import ModAPI, Event, Vector2D, Color, FontStyle
 from soldat_extmod_api.interprocess_utils.kernel_wrapper import GetKeyState
 from soldat_extmod_api.event_dispatcher import KeyInfo, VK_KEYCODE
 from ui.edit_keybind_button import MODIFIER_TO_VK, VK_TO_MODIFIER
+from transparency_controls_patch import TransparencyControlsPatch
 from outofbounds_event_provider import OutOfBoundsEventProvider
 from ui.offmap_hotkey_settings import OffmapHotkeySettings
 from nonspec_camera_controls import CameraControls
@@ -20,7 +21,7 @@ import os
 
 MAINTICKCOUNTER_PTR = 0x005E3C7C
 MAX_TICK = 0xFFFFFFFF
-MOD_VERSION_TEXT = "Climb QOL MOD 1.0.1"
+MOD_VERSION_TEXT = "Climb QOL MOD 1.0.2"
 FALLBACK_COLOR_CONFIG = "config.json"
 
 class ModMain:
@@ -51,6 +52,7 @@ class ModMain:
         self.offmap_hotkey = self.load_hotkey()
         self.screen_shake_patch = ScreenShakePatch(self.api)
         self.screen_shake_patch.remove_patch()
+        self.transparency_patch = TransparencyControlsPatch(self.api)
         self.offmap_hotkey_active = False
         self.ui_destroyed = False
         self.camera_controls = CameraControls(self.api)
@@ -145,6 +147,8 @@ class ModMain:
 
     def on_dx_not_ready(self):
         self.destroy_ui()
+        if self.transparency_patch.patch_applied:
+            self.show_players()
 
     def on_save(self, config: dict[str, str]):
         with open(self.current_color_config, "w") as f:
@@ -379,6 +383,8 @@ class ModMain:
         self.circular_menu.mode_cycle_button.set_callback(self.set_wireframe_mode)
         self.circular_menu.scenery_toggle_button.set_action_callback(self.disable_props)
         self.circular_menu.scenery_toggle_button.toggled_action_callback(self.enable_props)
+        self.circular_menu.players_toggle_button.set_action_callback(self.hide_players)
+        self.circular_menu.players_toggle_button.toggled_action_callback(self.show_players)
         self.circular_menu.outline_toggle_button.toggled = self.mod_config["outline_toggled"]
         self.circular_menu.outline_toggle_button.toggle()
         if not self.mod_config["dark_mode"]: self.circular_menu.toggle_color_mode()
@@ -441,6 +447,19 @@ class ModMain:
         mod_config[key] = value
         with open("mod_config.json", "w") as f:
             json.dump(mod_config, f, indent=4)
+
+    def hide_players(self):
+        self.transparency_patch.apply_patch()
+        for i in range(1, 33):
+            if i != self.own_player.id:
+                self.api.get_player(i).set_transparency(b"\x10")
+            else:
+                self.own_player.set_transparency(b"\xFF")
+
+    def show_players(self):
+        self.transparency_patch.remove_patch()
+        for i in range(1, 33):
+            self.api.get_player(i).set_transparency(b"\xFF")
 
 if __name__ == "__main__":
     main = ModMain()
