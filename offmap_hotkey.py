@@ -41,12 +41,7 @@ class OffmapHotkey:
             self.go_offmap()
 
     def go_offmap(self):
-        if not self.current_map_spawn_points_alpha or not self.current_map_spawn_points_bravo:
-            self.random_spawn = spawn_point_provider.internal_randomize_start(self.current_map_spawn_points_any)
-        else:
-            self.random_spawn = spawn_point_provider.internal_randomize_start(
-                self.current_map_spawn_points_alpha if self.current_team == 1 else self.current_map_spawn_points_bravo
-            )
+        self.random_spawn = self.get_spawn_point()
         self.on_limbo = True
         self.oob_provider.disable_random_start()
         if self.use_camera_pinning:
@@ -80,3 +75,12 @@ class OffmapHotkey:
             if self.use_camera_pinning:
                 self.camera_controls.restore_controls()
             self.oob_provider.enable_random_start()
+
+    def get_spawn_point(self):
+        if not self.current_map_spawn_points_alpha and self.current_team == 1:
+            return spawn_point_provider.internal_randomize_start(self.current_map_spawn_points_any)
+        if not self.current_map_spawn_points_bravo and self.current_team == 2:
+            return spawn_point_provider.internal_randomize_start(self.current_map_spawn_points_any)
+        return spawn_point_provider.internal_randomize_start(
+            self.current_map_spawn_points_alpha if self.current_team == 1 else self.current_map_spawn_points_bravo
+        )
