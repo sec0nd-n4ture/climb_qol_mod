@@ -149,6 +149,7 @@ class ModMain:
         self.destroy_ui()
         if self.transparency_patch.patch_applied:
             self.show_players()
+        self.camera_controls.enable_mouse_clamping()
 
     def on_save(self, config: dict[str, str]):
         with open(self.current_color_config, "w") as f:
@@ -279,6 +280,12 @@ class ModMain:
         self.mod_config["color_config_file"] = self.current_color_config
         self.update_mod_config("color_config_file", self.current_color_config)
 
+    def freecam_callback(self, state: bool):
+        if state:
+            self.camera_controls.disable_mouse_clamping()
+        else:
+            self.camera_controls.enable_mouse_clamping()
+
 # ================= HELPERS ================= #
 
     def matches_saved_hotkey(self, key_info: KeyInfo):
@@ -397,7 +404,8 @@ class ModMain:
             self.screen_shake_callback,
             self.key_bind_save_callback,
             self.set_camera_pinning_mode,
-            self.offmap_hotkey_state_callback
+            self.offmap_hotkey_state_callback,
+            self.freecam_callback
         )
         if self.offmap_hotkey:
             main_vk = self.offmap_hotkey['main_vk']
