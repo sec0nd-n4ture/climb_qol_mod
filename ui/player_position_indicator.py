@@ -35,7 +35,7 @@ class PlayerPositionIndicator:
         self.arrow.hide()
 
     def tick(self):
-        if self.enabled:
+        if self.enabled and self.player.team != 5:
             player_pos = self.player.get_position()
             camera_center = Vector2D.from_bytes(
                 self.api.soldat_bridge.read(
@@ -53,7 +53,8 @@ class PlayerPositionIndicator:
                 if not self.visible:
                     self.show()
             else:
-                self.hide()
+                if self.visible:
+                    self.hide()
 
     def on_leave(self):
         self.arrow.destroy()
