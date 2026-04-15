@@ -3,7 +3,7 @@ from soldat_extmod_api.mod_api import ModAPI
 PATCH_BYTES = b"\xE9\x53\x03\x00\x00\x90"
 PATCH_ADDRESS = 0x00544976
 MOUSE_CLAMP_ADDRESS = 0x00545273
-MOUSE_CLAMP_PATCH = b"\xE9\x7C\x90\x90\x90" # jmp 0x005452F1; nop; nop; nop
+MOUSE_CLAMP_PATCH = b"\xEB\x7C\x90\x90\x90" # jmp 0x005452F1; nop; nop; nop
 
 class CameraControls:
     def __init__(self, mod_api: ModAPI) -> None:
