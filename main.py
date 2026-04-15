@@ -3,6 +3,7 @@ from soldat_extmod_api.interprocess_utils.kernel_wrapper import GetKeyState
 from soldat_extmod_api.event_dispatcher import KeyInfo, VK_KEYCODE
 from ui.edit_keybind_button import MODIFIER_TO_VK, VK_TO_MODIFIER
 from transparency_controls_patch import TransparencyControlsPatch
+from ui.player_position_indicator import PlayerPositionIndicator
 from outofbounds_event_provider import OutOfBoundsEventProvider
 from ui.offmap_hotkey_settings import OffmapHotkeySettings
 from nonspec_camera_controls import CameraControls
@@ -96,6 +97,7 @@ class ModMain:
         self.ui = None
         self.hotkey_settings = None
         self.fast_tp_disabled = True
+        self.position_indicator = PlayerPositionIndicator(self.api)
 
     def main_loop(self):
         missed_tick_total = 0
@@ -140,6 +142,7 @@ class ModMain:
             )
         if self.offmap_hotkey_active:
             self.offmap_hkey.tick()
+        self.position_indicator.tick()
 
     def on_dx_ready(self):
         self.create_ui()
@@ -285,6 +288,7 @@ class ModMain:
             self.camera_controls.disable_mouse_clamping()
         else:
             self.camera_controls.enable_mouse_clamping()
+        self.position_indicator.enabled = state
 
 # ================= HELPERS ================= #
 
