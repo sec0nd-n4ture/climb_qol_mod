@@ -22,7 +22,7 @@ import os
 
 MAINTICKCOUNTER_PTR = 0x005E3C7C
 MAX_TICK = 0xFFFFFFFF
-MOD_VERSION_TEXT = "Climb QOL Mod 1.0.4"
+MOD_VERSION_TEXT = "Climb QOL Mod 1.0.5"
 FALLBACK_COLOR_CONFIG = "config.json"
 
 class ModMain:
