@@ -3,6 +3,7 @@ from soldat_extmod_api.interprocess_utils.kernel_wrapper import GetKeyState
 from soldat_extmod_api.event_dispatcher import KeyInfo, VK_KEYCODE
 from ui.edit_keybind_button import MODIFIER_TO_VK, VK_TO_MODIFIER
 from transparency_controls_patch import TransparencyControlsPatch
+from soldat_extmod_api.graphics_helper.sm_text import TextStruct
 from ui.player_position_indicator import PlayerPositionIndicator
 from outofbounds_event_provider import OutOfBoundsEventProvider
 from ui.offmap_hotkey_settings import OffmapHotkeySettings
@@ -452,6 +453,7 @@ class ModMain:
             self.offmap_hotkey_active = False
             self.offmap_hkey.use_camera_pinning = False
             self.screen_shake_patch.remove_patch()
+            self.destroy_texts()
             self.ui_destroyed = True
 
     def update_mod_config(self, key: str, value):
@@ -472,6 +474,30 @@ class ModMain:
         self.transparency_patch.remove_patch()
         for i in range(1, 33):
             self.api.get_player(i).set_transparency(b"\xFF")
+
+    def destroy_texts(self):
+        self.api.disable_drawing()
+        text_count = int.from_bytes(
+            self.api.soldat_bridge.read(
+                self.api.graphics_patcher.text_addresses, 4
+            ),
+            "little"
+        )
+        if text_count == 0:
+            return
+        text_array_start = self.api.graphics_patcher.text_addresses + 4
+        for i in range(text_count):
+            current_text = text_array_start + (TextStruct.size * i)
+            wchar_text_ptr_addr = current_text + TextStruct.wchar_ptr_offset
+            wchar_text = int.from_bytes(
+                self.api.soldat_bridge.read(wchar_text_ptr_addr, 4), "little"
+            )
+            if wchar_text != 0:
+                self.api.soldat_bridge.free_memory(wchar_text)
+                self.api.soldat_bridge.write(wchar_text_ptr_addr, b"\x00"*4)
+        self.api.soldat_bridge.write(
+            self.api.graphics_patcher.text_addresses, b"\x00"*4
+        )
 
 if __name__ == "__main__":
     main = ModMain()
