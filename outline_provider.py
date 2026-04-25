@@ -1,5 +1,5 @@
 from soldat_extmod_api.mod_api import MEM_COMMIT, MEM_RESERVE, PAGE_READWRITE
-from soldat_extmod_api.mod_api import ModAPI,Color
+from soldat_extmod_api.mod_api import ModAPI
 from poly_type import PolyType
 from pms_parser import Map
 import logging
