@@ -76,20 +76,10 @@ class ModMain:
         self.api.subscribe_event(self.on_any_key_up, Event.MOUSE_KEYUP)
         self.api.subscribe_event(self.on_mouse_left_down, Event.MOUSE_DOWN)
         self.outline_provider = OutlineProvider(self.config, self.api)
-        self.api.subscribe_event(self.outline_provider.update_wireframe, Event.DIRECTX_READY)
         self.freeze_cam = False
         self.circular_menu: None | CircularMenu = None
         self.game_focused = False
-        self.version_text = self.api.create_interface_text(
-            MOD_VERSION_TEXT,
-            Vector2D(self.api.get_gui_frame().position.x * 2 - 65, self.api.get_gui_frame().position.y * 2 - 10),
-            Color.from_hex("ffffffff"),
-            Color.from_hex("000000ff"),
-            1.0,
-            Vector2D(0.4, 0.8),
-            FontStyle.FONT_WEAPONS_MENU,
-            0.4
-        )
+        self.version_text = None
         self.own_player = self.api.get_player(self.api.get_own_id())
         self.oob_event_provider = OutOfBoundsEventProvider(self.api, self.own_player.tsprite_object_addr)
         self.oob_event_provider.patch()
@@ -146,8 +136,9 @@ class ModMain:
         self.position_indicator.tick()
 
     def on_dx_ready(self):
-        self.create_ui()
         self.own_player = self.api.get_player(self.api.get_own_id())
+        self.outline_provider.update_wireframe()
+        self.create_ui()
 
     def on_dx_not_ready(self):
         self.destroy_ui()
@@ -431,8 +422,18 @@ class ModMain:
 
         self.hotkey_settings.rows[0].keybind_button.key_display_text.set_text(key_text)
         self.circular_menu.offmap_settings_button.set_action_callback(self.show_hotkey_settings)
-        self.api.enable_drawing()
         self.offmap_hkey.own_player = self.api.get_player(self.api.get_own_id())
+        self.version_text = self.api.create_interface_text(
+            MOD_VERSION_TEXT,
+            Vector2D(self.api.get_gui_frame().position.x * 2 - 65, self.api.get_gui_frame().position.y * 2 - 10),
+            Color.from_hex("ffffffff"),
+            Color.from_hex("000000ff"),
+            1.0,
+            Vector2D(0.4, 0.8),
+            FontStyle.FONT_WEAPONS_MENU,
+            0.4
+        )
+        self.api.enable_drawing()
         self.ui_destroyed = False
 
     def destroy_ui(self):
