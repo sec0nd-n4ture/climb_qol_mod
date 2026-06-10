@@ -1,6 +1,5 @@
 from struct import unpack
 from enum import Enum
-from pathlib import Path
 from soldat_extmod_api.mod_api import Vector2D, ModAPI
 from random import randint, choice
 
@@ -65,8 +64,8 @@ def get_current_spawnpoints(mod_api: ModAPI, team: int) -> list[Vector2D] | None
             spawn_points.append(SpawnPoint(*unpack("?iii", data[cursor:cursor+16])))
             cursor += 16
 
-        if team not in (1, 2, -1):
-            raise ValueError(f"Expected alpha or bravo spawnpoint, got {str(team)}")
+        if team != -1 and team not in range(1, 5):
+            raise ValueError(f"Team {str(team)} not allowed")
         spawns = []
         for point in spawn_points:
             if point.active:
