@@ -25,6 +25,7 @@ class OffmapHotkey:
         self.current_team = self.own_player.team
         self.camera_controls = camera_controls
         self.oob_provider = oob_provider
+        self.any_team_allow = False
 
     def on_map_change(self, map_name: str) -> None:
         map_file_name = self.api.map_graphics.get_filename()
@@ -32,12 +33,23 @@ class OffmapHotkey:
         if map_name not in map_file_name:
             logging.warning("Map name mismatch, MapGraphics may be out of sync")
         self.map_bound = current_map.numSectors * current_map.sectorsDivision - 50
-        self.current_map_spawn_points_alpha = spawn_point_provider.get_current_spawnpoints(self.api, 1)
-        self.current_map_spawn_points_bravo = spawn_point_provider.get_current_spawnpoints(self.api, 2)
-        self.current_map_spawn_points_any = spawn_point_provider.get_current_spawnpoints(self.api, -1)
+        self.spawn_points = {
+            1: spawn_point_provider.get_current_spawnpoints(self.api, 1),
+            2: spawn_point_provider.get_current_spawnpoints(self.api, 2),
+            3: spawn_point_provider.get_current_spawnpoints(self.api, 3),
+            4: spawn_point_provider.get_current_spawnpoints(self.api, 4),
+        }
+
+        self.spawn_points_any = spawn_point_provider.get_current_spawnpoints(
+            self.api, -1
+        )
 
     def on_offmap_hotkey_pressed(self):
-        if self.current_team in (1, 2) and not self.own_player.get_is_dead():
+        if self.own_player.get_is_dead():
+            return
+        if self.any_team_allow:
+            self.go_offmap()
+        elif self.current_team in (1, 2):
             self.go_offmap()
 
     def go_offmap(self):
@@ -70,17 +82,16 @@ class OffmapHotkey:
             self.on_limbo = False
 
     def on_respawn(self):
-        if self.current_team in (1, 2):
+        if self.current_team in range(1, 5):
             self.own_player.set_position(self.random_spawn)
             if self.use_camera_pinning:
                 self.camera_controls.restore_controls()
             self.oob_provider.enable_random_start()
 
-    def get_spawn_point(self):
-        if not self.current_map_spawn_points_alpha and self.current_team == 1:
-            return spawn_point_provider.internal_randomize_start(self.current_map_spawn_points_any)
-        if not self.current_map_spawn_points_bravo and self.current_team == 2:
-            return spawn_point_provider.internal_randomize_start(self.current_map_spawn_points_any)
-        return spawn_point_provider.internal_randomize_start(
-            self.current_map_spawn_points_alpha if self.current_team == 1 else self.current_map_spawn_points_bravo
+    def get_spawn_point(self) -> Vector2D:
+        spawn_points = (
+            self.spawn_points.get(self.current_team)
+            or self.spawn_points_any
         )
+
+        return spawn_point_provider.internal_randomize_start(spawn_points)
