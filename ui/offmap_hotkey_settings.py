@@ -18,7 +18,8 @@ class OffmapHotkeySettings(Container):
             keybind_callback: Callable[[bool], None],
             camera_pinning_callback: Callable[[bool], None],
             offmap_hotkey_state_callback: Callable[[bool], None],
-            freecam_state_callback: Callable[[bool], None]
+            freecam_state_callback: Callable[[bool], None],
+            any_team_state_callback: Callable[[bool], None]
         ):
         self.title_text = mod_api.create_interface_text(
             "Offmap Hotkey Settings",
@@ -48,6 +49,7 @@ class OffmapHotkeySettings(Container):
         self.add_row(CheckboxSettingRow(self, "Use camera pinning", self.api, camera_pinning_callback))
         self.add_row(CheckboxSettingRow(self, "Disable screen shake", self.api, screen_shake_callback))
         self.add_row(CheckboxSettingRow(self, "Enable offmap hotkey", self.api, offmap_hotkey_state_callback))
+        self.add_row(CheckboxSettingRow(self, "Allow any team respawn", self.api, any_team_state_callback))
         self.add_row(CheckboxSettingRow(self, "Enable free cam", self.api, freecam_state_callback))
         self.hidden = False
         self.hide()

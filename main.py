@@ -243,6 +243,9 @@ class ModMain:
             self.oob_event_provider.enable_random_start()
             self.camera_controls.restore_controls()
 
+    def offmap_hotkey_anyteam_callback(self, state: bool):
+        self.offmap_hkey.any_team_allow = state
+
     def show_outline_config_ui(self):
         if not self.hotkey_settings.hidden:
             self.hotkey_settings.hide()
@@ -401,7 +404,8 @@ class ModMain:
             self.key_bind_save_callback,
             self.set_camera_pinning_mode,
             self.offmap_hotkey_state_callback,
-            self.freecam_callback
+            self.freecam_callback,
+            self.offmap_hotkey_anyteam_callback
         )
         if self.offmap_hotkey:
             main_vk = self.offmap_hotkey['main_vk']
